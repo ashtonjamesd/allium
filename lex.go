@@ -1,44 +1,82 @@
 package main
 
-import "fmt"
+import "unicode"
+
+type TokenType int
+
+const (
+	Hashtag TokenType = iota
+	Identifier
+	None
+)
 
 type LexState struct {
 	source  string
 	current int
+	exprs   []Token
+}
+
+type Token struct {
+	tokenKind TokenType
+	value     string
 }
 
 func NewLexer(source string) *LexState {
-	var lex LexState
-	lex.source = source
+	var lexer LexState
+	lexer.source = source
 
-	return &lex
+	return &lexer
 }
 
-func isEnd(state *LexState) bool {
-	return state.current >= len(state.source)
+func isEnd(lexer *LexState) bool {
+	return lexer.current >= len(lexer.source)
 }
 
-func current(state *LexState) byte {
-	if isEnd(state) {
+func current(lexer *LexState) byte {
+	if isEnd(lexer) {
 		return 0
 	}
-	return state.source[state.current]
+	return lexer.source[lexer.current]
 }
 
-func advance(state *LexState) {
-	state.current++
+func match(c byte, lexer *LexState) bool {
+	return current(lexer) == c
 }
 
-func Tokenize(state *LexState) {
+func advance(lexer *LexState) {
+	lexer.current++
+}
 
-	for !isEnd(state) {
-		ch := current(state)
-		fmt.Printf("%c\n", ch)
+func Tokenize(lexer *LexState) []Token {
+	var exprs []Token
 
-		advance(state)
+	for !isEnd(lexer) {
+		expr := parse_chars(lexer)
+		exprs = append(exprs, expr)
+
+		advance(lexer)
 	}
+
+	return exprs
 }
 
-func parse_char() {
+func parse_chars(lexer *LexState) Token {
+	if match('#', lexer) {
+		return newToken(Hashtag, "#")
+	} else if unicode.IsLetter(rune(current(lexer))) {
+		return newToken(Identifier, string(current(lexer)))
+	}
 
+	var none Token
+	none.tokenKind = None
+
+	return none
+}
+
+func newToken(lexType TokenType, value string) Token {
+	var token Token
+	token.value = value
+	token.tokenKind = lexType
+
+	return token
 }

@@ -13,6 +13,10 @@ func main() {
 	}
 
 	lex := NewLexer(string(dat))
-	Tokenize(lex)
+	tokens := Tokenize(lex)
+
+	for i, token := range tokens {
+		fmt.Printf("%d: %s %d\n", i, token.value, int(token.tokenKind))
+	}
 
 }
