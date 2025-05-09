@@ -1,6 +1,9 @@
 package main
 
 import (
+	gen "allium/src/convert"
+	"allium/src/lex"
+	"allium/src/parse"
 	"flag"
 	"fmt"
 	"os"
@@ -39,15 +42,15 @@ func convertToHTML(filepath string) error {
 		return err
 	}
 
-	lexer := NewLexer(string(data))
+	lexer := lex.NewLexer(string(data))
 	tokens := lexer.Tokenize()
-	PrintTokens(tokens)
+	lex.PrintTokens(tokens)
 
-	parser := NewParser(tokens)
+	parser := parse.NewParser(tokens)
 	exprs := parser.Parse()
-	PrintNodes(exprs)
+	parse.PrintNodes(exprs)
 
-	gen := NewGenerator(exprs)
+	gen := gen.NewGenerator(exprs)
 	gen.GenerateHtml()
 
 	return nil

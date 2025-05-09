@@ -1,7 +1,8 @@
-package main
+package lex
 
 import (
 	"fmt"
+	"strings"
 	"unicode"
 )
 
@@ -28,8 +29,8 @@ type LexState struct {
 }
 
 type Token struct {
-	tokenKind TokenType
-	value     string
+	TokenKind TokenType
+	Value     string
 }
 
 func NewLexer(source string) *LexState {
@@ -89,8 +90,18 @@ func (t TokenType) String() string {
 
 func PrintTokens(tokens []Token) {
 	for i, token := range tokens {
-		fmt.Printf("%d: %s %s\n", i, token.value, token.tokenKind)
+		escapedValue := escapeSpecialChars(string(token.Value))
+		fmt.Printf("%d: %s %s\n", i, escapedValue, token.TokenKind)
 	}
+}
+
+func escapeSpecialChars(s string) string {
+	s = strings.ReplaceAll(s, "\n", "\\n")
+	s = strings.ReplaceAll(s, "\r", "\\r")
+	s = strings.ReplaceAll(s, "\t", "\\t")
+	s = strings.ReplaceAll(s, "\b", "\\b")
+	s = strings.ReplaceAll(s, "\f", "\\f")
+	return s
 }
 
 func (l *LexState) Tokenize() []Token {
@@ -149,8 +160,8 @@ func (l *LexState) parseIdentifier() Token {
 
 func newToken(lexType TokenType, value string) Token {
 	var token Token
-	token.value = value
-	token.tokenKind = lexType
+	token.Value = value
+	token.TokenKind = lexType
 
 	return token
 }

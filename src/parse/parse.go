@@ -1,6 +1,7 @@
-package main
+package parse
 
 import (
+	"allium/src/lex"
 	"fmt"
 	"math"
 )
@@ -15,58 +16,58 @@ const (
 type NodeInterface any
 
 type HeaderNode struct {
-	level   int
-	content []NodeInterface
+	Level   int
+	Content []NodeInterface
 }
 
 type ParagraphNode struct {
-	content []NodeInterface
+	Content []NodeInterface
 }
 
 type NoNode struct{}
 
 type ItalicNode struct {
-	content string
+	Content string
 }
 
 type TextNode struct {
-	content string
+	Content string
 }
 
 type BoldNode struct {
-	content string
+	Content string
 }
 
 type WhiteSpaceNode struct{}
 type NewLineNode struct{}
 
 type Parser struct {
-	nodes   []NodeInterface
-	tokens  []Token
-	current int
+	Nodes   []NodeInterface
+	Tokens  []lex.Token
+	Current int
 }
 
-func (p *Parser) currentToken() Token {
+func (p *Parser) currentToken() lex.Token {
 	if p.isEnd() {
-		return Token{}
+		return lex.Token{}
 	}
-	return p.tokens[p.current]
+	return p.Tokens[p.Current]
 }
 
-func (p *Parser) match(tokenType TokenType) bool {
-	return p.currentToken().tokenKind == tokenType
+func (p *Parser) match(tokenType lex.TokenType) bool {
+	return p.currentToken().TokenKind == tokenType
 }
 
 func (p *Parser) advance() {
-	p.current++
+	p.Current++
 }
 
 func (p *Parser) recede() {
-	p.current--
+	p.Current--
 }
 
 func (p *Parser) isEnd() bool {
-	return p.current >= len(p.tokens)
+	return p.Current >= len(p.Tokens)
 }
 
 // func (p *Parser) peek() Token {
@@ -78,19 +79,17 @@ func (p *Parser) isEnd() bool {
 // }
 
 func (p *Parser) Parse() []NodeInterface {
-	for !p.isEnd() && p.currentToken().tokenKind != Eof {
+	for !p.isEnd() && p.currentToken().TokenKind != lex.Eof {
 		node := p.parseBlock()
-		p.nodes = append(p.nodes, node)
-
-		p.advance()
+		p.Nodes = append(p.Nodes, node)
 	}
 
-	return p.nodes
+	return p.Nodes
 }
 
 func (p *Parser) parseBlock() NodeInterface {
-	switch p.currentToken().tokenKind {
-	case Hashtag:
+	switch p.currentToken().TokenKind {
+	case lex.Hashtag:
 		return p.parseHeader()
 	default:
 		return p.parseParagraph()
@@ -98,7 +97,9 @@ func (p *Parser) parseBlock() NodeInterface {
 }
 
 func (p *Parser) parseParagraph() NodeInterface {
-	if p.match(NewLine) {
+	if p.match(lex.CarriageReturn) {
+		p.advance()
+		p.advance()
 		return NoNode{}
 	}
 
@@ -106,12 +107,12 @@ func (p *Parser) parseParagraph() NodeInterface {
 	var content []NodeInterface
 
 	var lastNode NodeInterface
-	for !p.isEnd() && p.currentToken().tokenKind != NewLine {
+	for !p.isEnd() && p.currentToken().TokenKind != lex.NewLine {
 		currentNode := p.parseInline()
 
 		if _, ok := lastNode.(NewLineNode); ok {
 			if _, ok := currentNode.(NewLineNode); ok {
-				p.recede()
+				// p.recede()
 				break
 			}
 		}
@@ -142,33 +143,33 @@ func (p *Parser) parseParagraph() NodeInterface {
 		return NoNode{}
 	}
 
-	node.content = content
+	node.Content = content
 	return node
 }
 
 func (p *Parser) parseInline() NodeInterface {
-	switch p.currentToken().tokenKind {
-	case Star, Underscore:
+	switch p.currentToken().TokenKind {
+	case lex.Star, lex.Underscore:
 		return p.parseBoldItalic()
-	case WhiteSpace:
+	case lex.WhiteSpace:
 		p.advance()
 		return WhiteSpaceNode{}
-	case NewLine, CarriageReturn:
+	case lex.NewLine, lex.CarriageReturn:
 		p.advance()
 		p.advance()
 		return NewLineNode{}
-	case Identifier, Comma, Exclamation:
-		content := p.currentToken().value
+	case lex.Identifier, lex.Comma, lex.Exclamation:
+		content := p.currentToken().Value
 		p.advance()
-		return TextNode{content: content}
+		return TextNode{Content: content}
 	default:
 		p.advance()
 		return NoNode{}
 	}
 }
 
-func (p *Parser) isBoldItalicToken(token Token) bool {
-	return token.tokenKind == Star || token.tokenKind == Underscore
+func (p *Parser) isBoldItalicToken(token lex.Token) bool {
+	return token.TokenKind == lex.Star || token.TokenKind == lex.Underscore
 }
 
 func (p *Parser) parseBoldItalic() NodeInterface {
@@ -179,8 +180,8 @@ func (p *Parser) parseBoldItalic() NodeInterface {
 	}
 
 	content := ""
-	for !p.isEnd() && p.currentToken().tokenKind != Eof {
-		content += p.currentToken().value
+	for !p.isEnd() && p.currentToken().TokenKind != lex.Eof {
+		content += p.currentToken().Value
 		p.advance()
 
 		if p.isBoldItalicToken(p.currentToken()) {
@@ -194,12 +195,12 @@ func (p *Parser) parseBoldItalic() NodeInterface {
 		p.advance()
 
 		var node BoldNode
-		node.content = content
+		node.Content = content
 		return node
 	}
 
 	var node ItalicNode
-	node.content = content
+	node.Content = content
 	return node
 }
 
@@ -207,34 +208,39 @@ func (p *Parser) parseHeader() NodeInterface {
 	level := 1
 
 	p.advance()
-	for p.currentToken().tokenKind == Hashtag {
+	for p.currentToken().TokenKind == lex.Hashtag {
 		level++
 		p.advance()
 	}
-	if p.currentToken().tokenKind == WhiteSpace {
+	if p.currentToken().TokenKind == lex.WhiteSpace {
 		p.advance()
 	}
 
 	var children []NodeInterface
-	for !p.isEnd() && p.currentToken().tokenKind != NewLine {
+	for !p.isEnd() && p.currentToken().TokenKind != lex.NewLine {
 		expr := p.parseInline()
-		children = append(children, expr)
 
-		if p.match(NewLine) {
+		if _, ok := expr.(NewLineNode); ok {
 			break
 		}
+
+		if p.match(lex.NewLine) {
+			break
+		}
+
+		children = append(children, expr)
 	}
 
 	var node HeaderNode
-	node.level = int(math.Min(float64(level), 6))
-	node.content = children
+	node.Level = int(math.Min(float64(level), 6))
+	node.Content = children
 
 	return node
 }
 
-func NewParser(tokens []Token) *Parser {
+func NewParser(tokens []lex.Token) *Parser {
 	var parser Parser
-	parser.tokens = tokens
+	parser.Tokens = tokens
 
 	return &parser
 }
@@ -250,24 +256,24 @@ func spaces(n int) string {
 }
 
 func (n ParagraphNode) Print(indent int) {
-	fmt.Printf("%sParagraphNode: %s\n", spaces(indent), n.content)
+	fmt.Printf("%sParagraphNode: %s\n", spaces(indent), n.Content)
 }
 
 func (n ItalicNode) Print(indent int) {
-	fmt.Printf("%sItalicNode: _%s_\n", spaces(indent), n.content)
+	fmt.Printf("%sItalicNode: _%s_\n", spaces(indent), n.Content)
 }
 
 func (n BoldNode) Print(indent int) {
-	fmt.Printf("%sBoldNode: **%s**\n", spaces(indent), n.content)
+	fmt.Printf("%sBoldNode: **%s**\n", spaces(indent), n.Content)
 }
 
 func (n TextNode) Print(indent int) {
-	fmt.Printf("%sTextNode: '%s'\n", spaces(indent), n.content)
+	fmt.Printf("%sTextNode: '%s'\n", spaces(indent), n.Content)
 }
 
 func (n HeaderNode) Print(indent int) {
-	fmt.Printf("%sHeaderNode (level %d):\n", spaces(indent), n.level)
-	for _, child := range n.content {
+	fmt.Printf("%sHeaderNode (level %d):\n", spaces(indent), n.Level)
+	for _, child := range n.Content {
 		printNode(child, indent+2)
 	}
 }
