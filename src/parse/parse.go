@@ -38,6 +38,19 @@ type BoldNode struct {
 	Content string
 }
 
+type LinkNode struct {
+	LinkText string
+	Link     string
+}
+
+type UnorderedList struct {
+	Nodes []NodeInterface
+}
+
+type UnorderedListNode struct {
+	Nodes []NodeInterface
+}
+
 type WhiteSpaceNode struct{}
 type NewLineNode struct{}
 
@@ -91,9 +104,77 @@ func (p *Parser) parseBlock() NodeInterface {
 	switch p.currentToken().TokenKind {
 	case lex.Hashtag:
 		return p.parseHeader()
+	case lex.LeftSquareBracket:
+		return p.parseLink()
+	case lex.Star:
+		return p.parseUnorderedList()
 	default:
 		return p.parseParagraph()
 	}
+}
+
+func (p *Parser) parseUnorderedList() NodeInterface {
+	var list UnorderedList
+
+	for !p.isEnd() && p.currentToken().TokenKind == lex.Star {
+		listItem := p.parseUnorderedListNode()
+		list.Nodes = append(list.Nodes, listItem)
+
+		for !p.isEnd() && (p.currentToken().TokenKind == lex.NewLine || p.currentToken().TokenKind == lex.CarriageReturn) {
+			p.advance()
+		}
+	}
+
+	return list
+}
+
+func (p *Parser) parseUnorderedListNode() NodeInterface {
+	var node UnorderedListNode
+
+	if p.match(lex.Star) {
+		p.advance()
+	}
+
+	if p.match(lex.WhiteSpace) {
+		p.advance()
+	}
+
+	for !p.isEnd() &&
+		p.currentToken().TokenKind != lex.NewLine &&
+		p.currentToken().TokenKind != lex.CarriageReturn {
+
+		token := p.parseInline()
+		if _, ok := token.(NoNode); !ok {
+			node.Nodes = append(node.Nodes, token)
+		}
+	}
+
+	return node
+}
+
+func (p *Parser) parseLink() NodeInterface {
+	p.advance()
+
+	linkText := ""
+	for !p.isEnd() && p.currentToken().TokenKind != lex.RightSquareBracket {
+		linkText += p.currentToken().Value
+		p.advance()
+	}
+
+	link := ""
+	p.advance()
+	p.advance()
+
+	for p.currentToken().TokenKind != lex.RightParen {
+		link += p.currentToken().Value
+		p.advance()
+	}
+
+	var node LinkNode
+	node.LinkText = linkText
+	node.Link = link
+
+	return node
 }
 
 func (p *Parser) parseParagraph() NodeInterface {
@@ -175,6 +256,7 @@ func (p *Parser) isBoldItalicToken(token lex.Token) bool {
 func (p *Parser) parseBoldItalic() NodeInterface {
 	p.advance()
 	isBold := p.isBoldItalicToken(p.currentToken())
+
 	if isBold {
 		p.advance()
 	}
@@ -290,6 +372,24 @@ func (n NoNode) Print(indent int) {
 	fmt.Printf("%sNoNode: '%s'\n", spaces(indent), "none")
 }
 
+func (n UnorderedListNode) Print(indent int) {
+	fmt.Printf("%sUnorderedListNode: \n", spaces(indent))
+	for _, child := range n.Nodes {
+		printNode(child, indent+2)
+	}
+}
+
+func (n UnorderedList) Print(indent int) {
+	fmt.Printf("%sUnorderedList: \n", spaces(indent))
+	for _, child := range n.Nodes {
+		printNode(child, indent+2)
+	}
+}
+
+func (n LinkNode) Print(indent int) {
+	fmt.Printf("%sLinkNode: '%s' : '%s'\n", spaces(indent), n.LinkText, n.Link)
+}
+
 func printNode(n NodeInterface, indent int) {
 	switch node := n.(type) {
 	case ParagraphNode:
@@ -307,6 +407,12 @@ func printNode(n NodeInterface, indent int) {
 	case NewLineNode:
 		node.Print(indent)
 	case NoNode:
+		node.Print(indent)
+	case LinkNode:
+		node.Print(indent)
+	case UnorderedListNode:
+		node.Print(indent)
+	case UnorderedList:
 		node.Print(indent)
 	default:
 		fmt.Printf("%sUnknown node type\n", spaces(indent))

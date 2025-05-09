@@ -18,6 +18,11 @@ const (
 	Exclamation
 	Star
 	Underscore
+	LeftSquareBracket
+	RightSquareBracket
+	LeftParen
+	RightParen
+	Tab
 	Eof
 	None
 )
@@ -81,6 +86,14 @@ func (t TokenType) String() string {
 		return "CarriageReturn"
 	case Eof:
 		return "Eof"
+	case LeftSquareBracket:
+		return "LeftSquareBracket"
+	case RightSquareBracket:
+		return "RightSquareBracket"
+	case LeftParen:
+		return "LeftParen"
+	case RightParen:
+		return "RightParen"
 	case None:
 		return "None"
 	default:
@@ -135,12 +148,17 @@ func (l *LexState) parseSymbol() Token {
 	symbolMap["!"] = Exclamation
 	symbolMap["*"] = Star
 	symbolMap["_"] = Underscore
+	symbolMap["["] = LeftSquareBracket
+	symbolMap["]"] = RightSquareBracket
+	symbolMap["("] = LeftParen
+	symbolMap[")"] = RightParen
+	symbolMap["\t"] = Tab
 
 	c := string(l.currentChar())
 
 	value, ok := symbolMap[c]
 	if !ok {
-		return newToken(None, "")
+		return newToken(None, c)
 	}
 
 	return newToken(value, c)

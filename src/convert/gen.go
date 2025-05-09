@@ -60,9 +60,24 @@ func (g *Generator) convert_node(file *os.File, node parse.NodeInterface) {
 		fmt.Fprintf(file, "")
 	case parse.NewLineNode:
 		// if _, wasNewLine := g.previousNode.(NewLineNode); !wasNewLine {
-		// fmt.Fprintf(file, "<br>")
-		fmt.Fprintf(file, "\n")
+		fmt.Fprintf(file, "<br>")
+		// fmt.Fprintf(file, "\n")
 		// }
+	case parse.LinkNode:
+		fmt.Fprintf(file, "<a href=\"%s\">%s</a>\n", node.Link, node.LinkText)
+	case parse.UnorderedListNode:
+		fmt.Fprintf(file, "<li>")
+		for _, listNode := range node.Nodes {
+			g.convert_node(file, listNode)
+		}
+		fmt.Fprintf(file, "</li>\n")
+	case parse.UnorderedList:
+		fmt.Fprintf(file, "<ul>\n")
+		for _, list := range node.Nodes {
+			g.convert_node(file, list)
+		}
+		fmt.Fprintf(file, "</ul>")
+
 	default:
 		fmt.Printf("Unknown node type: %s", node)
 	}
