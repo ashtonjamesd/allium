@@ -41,10 +41,14 @@ func convertToHTML(filepath string) error {
 
 	lexer := NewLexer(string(data))
 	tokens := lexer.Tokenize()
+	PrintTokens(tokens)
 
 	parser := NewParser(tokens)
 	exprs := parser.Parse()
+	PrintNodes(exprs)
 
-	GenerateHtml(exprs)
+	gen := NewGenerator(exprs)
+	gen.GenerateHtml()
+
 	return nil
 }
