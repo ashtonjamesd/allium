@@ -1,126 +1,13 @@
 package lex
 
 import (
-	"fmt"
-	"strings"
 	"unicode"
-)
-
-type TokenType int
-
-const (
-	Hashtag TokenType = iota
-	Comma
-	Identifier
-	NewLine
-	CarriageReturn
-	WhiteSpace
-	Exclamation
-	Star
-	Underscore
-	LeftSquareBracket
-	RightSquareBracket
-	LeftParen
-	RightParen
-	GreaterThan
-	Tab
-	Minus
-	Eof
-	None
 )
 
 type LexState struct {
 	source  string
 	current int
 	tokens  []Token
-}
-
-type Token struct {
-	TokenKind TokenType
-	Value     string
-}
-
-func NewLexer(source string) *LexState {
-	var lexer LexState
-	lexer.source = source
-
-	return &lexer
-}
-
-func (l *LexState) isEnd() bool {
-	return l.current >= len(l.source)
-}
-
-func (l *LexState) currentChar() rune {
-	if l.isEnd() {
-		return 0
-	}
-	return rune(l.source[l.current])
-}
-
-func (l *LexState) advance() {
-	l.current++
-}
-
-func (l *LexState) recede() {
-	l.current--
-}
-
-func (t TokenType) String() string {
-	switch t {
-	case Hashtag:
-		return "Hashtag"
-	case Comma:
-		return "Comma"
-	case Identifier:
-		return "Identifier"
-	case NewLine:
-		return "NewLine"
-	case WhiteSpace:
-		return "WhiteSpace"
-	case Exclamation:
-		return "Exclamation"
-	case Star:
-		return "Star"
-	case Underscore:
-		return "Underscore"
-	case CarriageReturn:
-		return "CarriageReturn"
-	case Eof:
-		return "Eof"
-	case Minus:
-		return "Minus"
-	case GreaterThan:
-		return "GreaterThan"
-	case LeftSquareBracket:
-		return "LeftSquareBracket"
-	case RightSquareBracket:
-		return "RightSquareBracket"
-	case LeftParen:
-		return "LeftParen"
-	case RightParen:
-		return "RightParen"
-	case None:
-		return "None"
-	default:
-		return "Unknown"
-	}
-}
-
-func PrintTokens(tokens []Token) {
-	for i, token := range tokens {
-		escapedValue := escapeSpecialChars(string(token.Value))
-		fmt.Printf("%d: %s %s\n", i, escapedValue, token.TokenKind)
-	}
-}
-
-func escapeSpecialChars(s string) string {
-	s = strings.ReplaceAll(s, "\n", "\\n")
-	s = strings.ReplaceAll(s, "\r", "\\r")
-	s = strings.ReplaceAll(s, "\t", "\\t")
-	s = strings.ReplaceAll(s, "\b", "\\b")
-	s = strings.ReplaceAll(s, "\f", "\\f")
-	return s
 }
 
 func (l *LexState) Tokenize() []Token {
@@ -139,6 +26,8 @@ func (l *LexState) parseChars() Token {
 	switch {
 	case unicode.IsLetter(l.currentChar()):
 		return l.parseIdentifier()
+	case unicode.IsDigit(l.currentChar()):
+		return l.parseNumeric()
 	default:
 		return l.parseSymbol()
 	}
@@ -161,6 +50,8 @@ func (l *LexState) parseSymbol() Token {
 	symbolMap["\t"] = Tab
 	symbolMap["-"] = Minus
 	symbolMap[">"] = GreaterThan
+	symbolMap["`"] = BackTick
+	symbolMap["."] = Dot
 
 	c := string(l.currentChar())
 
@@ -184,10 +75,48 @@ func (l *LexState) parseIdentifier() Token {
 	return newToken(Identifier, lexeme)
 }
 
+func (l *LexState) parseNumeric() Token {
+	var start = l.current
+	for unicode.IsDigit(l.currentChar()) {
+		l.advance()
+	}
+
+	var lexeme = l.source[start:l.current]
+	l.recede()
+
+	return newToken(Number, lexeme)
+}
+
 func newToken(lexType TokenType, value string) Token {
 	var token Token
 	token.Value = value
 	token.TokenKind = lexType
 
 	return token
+}
+
+func (l *LexState) isEnd() bool {
+	return l.current >= len(l.source)
+}
+
+func (l *LexState) currentChar() rune {
+	if l.isEnd() {
+		return 0
+	}
+	return rune(l.source[l.current])
+}
+
+func (l *LexState) advance() {
+	l.current++
+}
+
+func (l *LexState) recede() {
+	l.current--
+}
+
+func NewLexer(source string) *LexState {
+	var lexer LexState
+	lexer.source = source
+
+	return &lexer
 }

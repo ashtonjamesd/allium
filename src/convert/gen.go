@@ -69,25 +69,33 @@ func (g *Generator) convert_node(file *os.File, node parse.NodeInterface) {
 		fmt.Fprintf(file, "")
 	case parse.NewLineNode:
 		// if _, wasNewLine := g.previousNode.(NewLineNode); !wasNewLine {
-		fmt.Fprintf(file, "<br>")
-		// fmt.Fprintf(file, "\n")
+		// fmt.Fprintf(file, "<br>")
+		fmt.Fprintf(file, "\n")
 		// }
 	case parse.LinkNode:
 		fmt.Fprintf(file, "<a href=\"%s\">%s</a>\n", node.Link, node.LinkText)
 	case parse.ImageNode:
 		fmt.Fprintf(file, "<img src=\"%s\" alt=\"%s\">\n", node.Link, node.LinkText)
-	case parse.UnorderedListNode:
+	case parse.ListItemNode:
 		fmt.Fprintf(file, "<li>")
 		for _, listNode := range node.Nodes {
 			g.convert_node(file, listNode)
 		}
 		fmt.Fprintf(file, "</li>\n")
-	case parse.UnorderedList:
-		fmt.Fprintf(file, "<ul>\n")
+	case parse.ListNode:
+		if node.IsOrdered {
+			fmt.Fprintf(file, "<ol>\n")
+		} else {
+			fmt.Fprintf(file, "<ul>\n")
+		}
 		for _, list := range node.Nodes {
 			g.convert_node(file, list)
 		}
-		fmt.Fprintf(file, "</ul>\n")
+		if node.IsOrdered {
+			fmt.Fprintf(file, "</ol>\n")
+		} else {
+			fmt.Fprintf(file, "</ul>\n")
+		}
 	case parse.HorizontalRuleNode:
 		fmt.Fprintf(file, "<hr>\n")
 	case parse.BlockQuoteNode:
@@ -96,6 +104,16 @@ func (g *Generator) convert_node(file *os.File, node parse.NodeInterface) {
 			g.convert_node(file, list)
 		}
 		fmt.Fprintf(file, "\n</blockquote>\n")
+	case parse.InlineCodeNode:
+		fmt.Fprintf(file, "<code>")
+		fmt.Fprintf(file, "%s", node.Content)
+		fmt.Fprintf(file, "</code>\n")
+	case parse.InlineCodeBlockNode:
+		fmt.Fprintf(file, "<pre>")
+		fmt.Fprintf(file, "<code>")
+		fmt.Fprintf(file, "%s", node.Content)
+		fmt.Fprintf(file, "</code>")
+		fmt.Fprintf(file, "</pre>")
 	default:
 		fmt.Printf("Unknown node type: %s", node)
 	}

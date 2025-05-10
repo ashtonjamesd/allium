@@ -1,27 +1,17 @@
-[Ashton James](https://ashtonjames.com)
+1. Ingredients
 
-# Header 1
+- spaghetti
+- marinara sauce
+- salt
 
-This is a paragraph of **bold text** and *italic text*.
+2. Cooking
 
-## Header 2
+Bring water to boil, add a pinch of salt and spaghetti. Cook until pasta is **tender**.
 
-Some more **bold text** and *italicized words* in this section.
+3. Serve
 
-### Header 3
+Drain the pasta on a plate. Add heated sauce. 
 
-**Bold Text** in a smaller section. *Italicized words* here too.
+> No man is lonely eating spaghetti; it requires so much attention.
 
-#### Header 4
-
-Here’s a combination of both **bold** and *italic* in the same line.
-
-##### Header 5
-
-This is just regular text with a *bit of italicization* and some **bolding**.
-
-###### Header 6
-
-Final header with **bold and *italic* formatting together**.
-
-This paragraph has both **bold** and *italic* for testing.
+Bon appetit!
