@@ -19,9 +19,8 @@ func NewGenerator(nodes []parse.NodeInterface) Generator {
 	return gen
 }
 
-func (g *Generator) GenerateHtml() {
-	_ = os.Mkdir("out", 0755)
-	file, err := os.Create("out/out.html")
+func (g *Generator) GenerateHtml(filepath string) {
+	file, err := os.Create(filepath)
 	if err != nil {
 		panic(err)
 	}

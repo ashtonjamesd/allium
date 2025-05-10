@@ -1,17 +1,24 @@
-1. Ingredients
+*Italic*
+_Italic_
+__Bold__
+**Bold**
+# Heading 1
+## Heading 2
+[Ashton James](https://ashtonjamesd.com)
+![Image Alt](https://someimage.xyz)
+> BlockQuote
+* item a
+* item b
+* item c
+`inline code`
+```
+this is
+an
 
-- spaghetti
-- marinara sauce
-- salt
+inline code
 
-2. Cooking
-
-Bring water to boil, add a pinch of salt and spaghetti. Cook until pasta is **tender**.
-
-3. Serve
-
-Drain the pasta on a plate. Add heated sauce. 
-
-> No man is lonely eating spaghetti; it requires so much attention.
-
-Bon appetit!
+block
+```
+1. ordered item 1
+3. ordered item 2
+2. ordered item 3

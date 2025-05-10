@@ -19,3 +19,6 @@ inline code
 
 block
 ```
+1. ordered item 1
+3. ordered item 2
+2. ordered item 3
