@@ -49,9 +49,18 @@ func (g *Generator) convert_node(file *os.File, node parse.NodeInterface) {
 		}
 		fmt.Fprintf(file, "</p>\n")
 	case parse.ItalicNode:
-		fmt.Fprintf(file, "<em>%s</em>", node.Content)
+		fmt.Fprintf(file, "<em>")
+		for _, paragraphNode := range node.Nodes {
+			g.convert_node(file, paragraphNode)
+		}
+		fmt.Fprintf(file, "</em>")
+
 	case parse.BoldNode:
-		fmt.Fprintf(file, "<strong>%s</strong>", node.Content)
+		fmt.Fprintf(file, "<strong>")
+		for _, paragraphNode := range node.Nodes {
+			g.convert_node(file, paragraphNode)
+		}
+		fmt.Fprintf(file, "</strong>")
 	case parse.WhiteSpaceNode:
 		fmt.Fprintf(file, " ")
 	case parse.TextNode:
@@ -79,7 +88,14 @@ func (g *Generator) convert_node(file *os.File, node parse.NodeInterface) {
 			g.convert_node(file, list)
 		}
 		fmt.Fprintf(file, "</ul>\n")
-
+	case parse.HorizontalRuleNode:
+		fmt.Fprintf(file, "<hr>\n")
+	case parse.BlockQuoteNode:
+		fmt.Fprintf(file, "<blockquote>\n")
+		for _, list := range node.Nodes {
+			g.convert_node(file, list)
+		}
+		fmt.Fprintf(file, "\n</blockquote>\n")
 	default:
 		fmt.Printf("Unknown node type: %s", node)
 	}

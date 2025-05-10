@@ -22,7 +22,9 @@ const (
 	RightSquareBracket
 	LeftParen
 	RightParen
+	GreaterThan
 	Tab
+	Minus
 	Eof
 	None
 )
@@ -86,6 +88,10 @@ func (t TokenType) String() string {
 		return "CarriageReturn"
 	case Eof:
 		return "Eof"
+	case Minus:
+		return "Minus"
+	case GreaterThan:
+		return "GreaterThan"
 	case LeftSquareBracket:
 		return "LeftSquareBracket"
 	case RightSquareBracket:
@@ -153,6 +159,8 @@ func (l *LexState) parseSymbol() Token {
 	symbolMap["("] = LeftParen
 	symbolMap[")"] = RightParen
 	symbolMap["\t"] = Tab
+	symbolMap["-"] = Minus
+	symbolMap[">"] = GreaterThan
 
 	c := string(l.currentChar())
 

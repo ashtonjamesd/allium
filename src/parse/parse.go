@@ -32,7 +32,7 @@ type ImageNode struct {
 type NoNode struct{}
 
 type ItalicNode struct {
-	Content string
+	Nodes []NodeInterface
 }
 
 type TextNode struct {
@@ -40,7 +40,7 @@ type TextNode struct {
 }
 
 type BoldNode struct {
-	Content string
+	Nodes []NodeInterface
 }
 
 type LinkNode struct {
@@ -55,6 +55,12 @@ type UnorderedList struct {
 type UnorderedListNode struct {
 	Nodes []NodeInterface
 }
+
+type BlockQuoteNode struct {
+	Nodes []NodeInterface
+}
+
+type HorizontalRuleNode struct{}
 
 type WhiteSpaceNode struct{}
 type NewLineNode struct{}
@@ -88,13 +94,13 @@ func (p *Parser) isEnd() bool {
 	return p.Current >= len(p.Tokens)
 }
 
-// func (p *Parser) peek() Token {
-// 	p.advance()
-// 	next := p.currentToken()
-// 	p.recede()
+func (p *Parser) peek() lex.Token {
+	p.advance()
+	next := p.currentToken()
+	p.recede()
 
-// 	return next
-// }
+	return next
+}
 
 func (p *Parser) Parse() []NodeInterface {
 	for !p.isEnd() && p.currentToken().TokenKind != lex.Eof {
@@ -112,10 +118,53 @@ func (p *Parser) parseBlock() NodeInterface {
 	case lex.LeftSquareBracket, lex.Exclamation:
 		return p.parseLink()
 	case lex.Star:
-		return p.parseUnorderedList()
+		if p.peek().TokenKind == lex.WhiteSpace {
+			return p.parseUnorderedList()
+		}
+		return p.parseParagraph()
+	case lex.Minus:
+		return p.parseHorizontalRule()
+	case lex.GreaterThan:
+		return p.parseBlockQuote()
 	default:
 		return p.parseParagraph()
 	}
+}
+
+func (p *Parser) parseBlockQuote() NodeInterface {
+	p.advance()
+
+	var nodes []NodeInterface
+	for !p.isEnd() && !p.isNodeEnd() {
+		node := p.parseInline()
+		nodes = append(nodes, node)
+	}
+
+	var node BlockQuoteNode
+	node.Nodes = nodes
+
+	return node
+}
+
+func (p *Parser) parseHorizontalRule() NodeInterface {
+	p.advance()
+
+	if p.currentToken().TokenKind == lex.Minus {
+		p.advance()
+
+		if p.currentToken().TokenKind == lex.Minus {
+			p.advance()
+			return HorizontalRuleNode{}
+		} else {
+			p.recede()
+			p.recede()
+		}
+	} else {
+		p.recede()
+	}
+
+	return p.parseParagraph()
+
 }
 
 func (p *Parser) parseUnorderedList() NodeInterface {
@@ -133,6 +182,11 @@ func (p *Parser) parseUnorderedList() NodeInterface {
 	return list
 }
 
+func (p *Parser) isNodeEnd() bool {
+	return p.currentToken().TokenKind == lex.NewLine ||
+		p.currentToken().TokenKind == lex.CarriageReturn
+}
+
 func (p *Parser) parseUnorderedListNode() NodeInterface {
 	var node UnorderedListNode
 
@@ -144,10 +198,7 @@ func (p *Parser) parseUnorderedListNode() NodeInterface {
 		p.advance()
 	}
 
-	for !p.isEnd() &&
-		p.currentToken().TokenKind != lex.NewLine &&
-		p.currentToken().TokenKind != lex.CarriageReturn {
-
+	for !p.isEnd() && p.isNodeEnd() {
 		token := p.parseInline()
 		if _, ok := token.(NoNode); !ok {
 			node.Nodes = append(node.Nodes, token)
@@ -179,6 +230,7 @@ func (p *Parser) parseLink() NodeInterface {
 		link += p.currentToken().Value
 		p.advance()
 	}
+	p.advance()
 
 	if isImage {
 		var node ImageNode
@@ -257,13 +309,14 @@ func (p *Parser) parseInline() NodeInterface {
 		p.advance()
 		p.advance()
 		return NewLineNode{}
-	case lex.Identifier, lex.Comma, lex.Exclamation:
+	// case lex.Identifier, lex.Comma, lex.Exclamation, lex.Minus:
+	default:
 		content := p.currentToken().Value
 		p.advance()
 		return TextNode{Content: content}
-	default:
-		p.advance()
-		return NoNode{}
+		// default:
+		// p.advance()
+		// return NoNode{}
 	}
 }
 
@@ -272,36 +325,46 @@ func (p *Parser) isBoldItalicToken(token lex.Token) bool {
 }
 
 func (p *Parser) parseBoldItalic() NodeInterface {
-	p.advance()
-	isBold := p.isBoldItalicToken(p.currentToken())
+	marker := p.currentToken().TokenKind
+	markerCount := 0
 
-	if isBold {
+	for !p.isEnd() && p.currentToken().TokenKind == marker {
+		markerCount++
 		p.advance()
 	}
 
-	content := ""
-	for !p.isEnd() && p.currentToken().TokenKind != lex.Eof {
-		content += p.currentToken().Value
-		p.advance()
+	var nodes []NodeInterface
+	for !p.isEnd() {
+		if p.currentToken().TokenKind == marker {
+			count := 0
+			start := p.Current
+			for !p.isEnd() && p.currentToken().TokenKind == marker {
+				count++
+				p.advance()
+			}
 
-		if p.isBoldItalicToken(p.currentToken()) {
-			break
+			if count == markerCount {
+				break
+			} else {
+				p.Current = start
+			}
 		}
+
+		child := p.parseInline()
+		nodes = append(nodes, child)
 	}
 
-	p.advance()
-
-	if isBold {
-		p.advance()
-
-		var node BoldNode
-		node.Content = content
-		return node
+	var result NodeInterface
+	switch markerCount {
+	case 3:
+		result = BoldNode{Nodes: []NodeInterface{ItalicNode{Nodes: nodes}}}
+	case 2:
+		result = BoldNode{Nodes: nodes}
+	case 1:
+		result = ItalicNode{Nodes: nodes}
 	}
 
-	var node ItalicNode
-	node.Content = content
-	return node
+	return result
 }
 
 func (p *Parser) parseHeader() NodeInterface {
@@ -356,15 +419,24 @@ func spaces(n int) string {
 }
 
 func (n ParagraphNode) Print(indent int) {
-	fmt.Printf("%sParagraphNode: %s\n", spaces(indent), n.Content)
+	fmt.Printf("%sParagraphNode: \n", spaces(indent))
+	for _, child := range n.Content {
+		printNode(child, indent+2)
+	}
 }
 
 func (n ItalicNode) Print(indent int) {
-	fmt.Printf("%sItalicNode: _%s_\n", spaces(indent), n.Content)
+	fmt.Printf("%sItalicNode: \n", spaces(indent))
+	for _, child := range n.Nodes {
+		printNode(child, indent+2)
+	}
 }
 
 func (n BoldNode) Print(indent int) {
-	fmt.Printf("%sBoldNode: **%s**\n", spaces(indent), n.Content)
+	fmt.Printf("%sBoldNode: \n", spaces(indent))
+	for _, child := range n.Nodes {
+		printNode(child, indent+2)
+	}
 }
 
 func (n TextNode) Print(indent int) {
@@ -390,6 +462,10 @@ func (n NoNode) Print(indent int) {
 	fmt.Printf("%sNoNode: '%s'\n", spaces(indent), "none")
 }
 
+func (n HorizontalRuleNode) Print(indent int) {
+	fmt.Printf("%sHorizontalRuleNode: '%s'\n", spaces(indent), "---")
+}
+
 func (n UnorderedListNode) Print(indent int) {
 	fmt.Printf("%sUnorderedListNode: \n", spaces(indent))
 	for _, child := range n.Nodes {
@@ -406,6 +482,13 @@ func (n UnorderedList) Print(indent int) {
 
 func (n LinkNode) Print(indent int) {
 	fmt.Printf("%sLinkNode: '%s' : '%s'\n", spaces(indent), n.LinkText, n.Link)
+}
+
+func (n BlockQuoteNode) Print(indent int) {
+	fmt.Printf("%sBlockQuoteNode: \n", spaces(indent))
+	for _, child := range n.Nodes {
+		printNode(child, indent+2)
+	}
 }
 
 func printNode(n NodeInterface, indent int) {
@@ -431,6 +514,10 @@ func printNode(n NodeInterface, indent int) {
 	case UnorderedListNode:
 		node.Print(indent)
 	case UnorderedList:
+		node.Print(indent)
+	case HorizontalRuleNode:
+		node.Print(indent)
+	case BlockQuoteNode:
 		node.Print(indent)
 	default:
 		fmt.Printf("%sUnknown node type\n", spaces(indent))
