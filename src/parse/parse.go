@@ -24,6 +24,11 @@ type ParagraphNode struct {
 	Content []NodeInterface
 }
 
+type ImageNode struct {
+	LinkText string
+	Link     string
+}
+
 type NoNode struct{}
 
 type ItalicNode struct {
@@ -104,7 +109,7 @@ func (p *Parser) parseBlock() NodeInterface {
 	switch p.currentToken().TokenKind {
 	case lex.Hashtag:
 		return p.parseHeader()
-	case lex.LeftSquareBracket:
+	case lex.LeftSquareBracket, lex.Exclamation:
 		return p.parseLink()
 	case lex.Star:
 		return p.parseUnorderedList()
@@ -153,6 +158,11 @@ func (p *Parser) parseUnorderedListNode() NodeInterface {
 }
 
 func (p *Parser) parseLink() NodeInterface {
+	isImage := p.currentToken().TokenKind == lex.Exclamation
+	if isImage {
+		p.advance()
+	}
+
 	p.advance()
 
 	linkText := ""
@@ -168,6 +178,14 @@ func (p *Parser) parseLink() NodeInterface {
 	for p.currentToken().TokenKind != lex.RightParen {
 		link += p.currentToken().Value
 		p.advance()
+	}
+
+	if isImage {
+		var node ImageNode
+		node.Link = link
+		node.LinkText = linkText
+
+		return node
 	}
 
 	var node LinkNode
