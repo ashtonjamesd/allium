@@ -19,5 +19,5 @@ go run ./src --convert=[tohtml | tomd] --path=<source> --output=*.[html | md]
 ## Example
 
 ```
-go run ./src --convert=tohtml --path=example.md
+go run ./src --convert=tohtml --path=example.md --output=out/out.html
 ```
